@@ -92,12 +92,22 @@ python3 -m http.server      # from the repo root, then open:
 
 Both examples pull Three.js from a CDN via an import map — no install needed.
 
-## Background
+## Background & attribution
 
-This started as a reverse-engineering of a Blender Geometry-Nodes cloud tool. The lighting
-half turned out to be reusable and Blender-agnostic, so it was extracted here. The cloud
-example is an **original** re-creation (procedurally generated brush atlas, no third-party
-assets) that demonstrates consuming the module.
+The **stylized cloud technique** demonstrated in `examples/cloud` (camera-facing billboard
+cards + baked form normals + an NPR grade) was inspired by **Rei (@reipart_)**'s excellent
+"Stylized Cloud Generator" Blender tool. That is a **paid, commercial product** — go buy it
+if you want the real thing.
+
+**This repository contains none of Rei's assets or data.** No textures, no `.blend` files,
+no extracted node values, no parameter presets from the tool. The brush-stroke atlas in the
+cloud example is generated procedurally on a `<canvas>` at runtime, and the environment
+lighting (this library's actual subject) is a generic Blender/Eevee reimplementation, not
+specific to any product. Nothing here reproduces the paid tool.
+
+This project exists because, while studying how such a look is built, the **lighting +
+view-transform half** turned out to be reusable and completely Blender-agnostic — so it was
+extracted into this standalone, asset-free library.
 
 Two things a Blender→web port must add that Blender handles implicitly, both shown in the
 cloud example:
