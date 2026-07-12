@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>eevee-threejs</title>
+<style>
+  :root { color-scheme: dark; }
+  body{margin:0;min-height:100vh;background:#2c2e30;color:#e8e8e8;
+    font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center}
+  main{max-width:640px;padding:48px 28px}
+  h1{font-size:2rem;margin:0 0 .3em}
+  p{line-height:1.6;color:#bdbdbd}
+  code{background:#3a3d40;padding:.1em .4em;border-radius:4px;font-size:.9em}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:32px 0}
+  a.card{display:block;padding:20px;background:#37393c;border:1px solid #454749;
+    border-radius:10px;text-decoration:none;color:#fff;transition:.15s}
+  a.card:hover{background:#40474e;border-color:#6ea8e6;transform:translateY(-2px)}
+  a.card b{display:block;font-size:1.05rem;margin-bottom:6px}
+  a.card span{color:#a8b0b8;font-size:.85rem;line-height:1.4}
+  .foot{font-size:.8rem;color:#888;margin-top:28px}
+  .foot a{color:#8fb8e8}
+  @media(max-width:560px){.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>eevee-threejs</h1>
+  <p>A small, asset-free reimplementation of Blender/Eevee's lighting +
+  view-transform pipeline (sun + gradient-sky world + <code>Shader to RGB</code>
+  diffuse + Filmic/AgX) for Three.js custom shaders.</p>
+
+  <div class="cards">
+    <a class="card" href="./examples/primitives/">
+      <b>Lit Primitives →</b>
+      <span>Sphere + torus-knot lit by the module. Switch view transforms live.</span>
+    </a>
+    <a class="card" href="./examples/cloud/">
+      <b>Painterly Cloud →</b>
+      <span>Billboard cloud with a procedurally-generated brush atlas.</span>
+    </a>
+  </div>
+
+  <p class="foot">
+    Drag to orbit in either demo · source on
+    <a href="https://github.com/tatimblin/eevee-threejs">GitHub</a>
+  </p>
+</main>
+</body>
+</html>
