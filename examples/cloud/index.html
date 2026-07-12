@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>eevee-threejs — Painterly Cloud</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#3b3b3b;font-family:system-ui,sans-serif}
+  #info{position:fixed;left:12px;bottom:10px;color:#aaa;font-size:12px;opacity:.7;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="info">eevee-threejs · painterly billboard cloud (procedural brush atlas) lit by the Eevee module. Drag to orbit.</div>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "lil-gui": "https://unpkg.com/lil-gui@0.19.2/dist/lil-gui.esm.js",
+    "eevee-threejs": "../../src/eevee.js"
+  }
+}
+</script>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
