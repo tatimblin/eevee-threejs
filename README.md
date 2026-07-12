@@ -14,8 +14,13 @@ It is **not** a full PBR renderer. It ports the specific, extremely common Eevee
 *"one sun + a colored/gradient world + Filmic"* into reusable GLSL chunks you compose into
 your own `ShaderMaterial`.
 
-![primitives](docs/primitives.png)
-![cloud](docs/cloud.png)
+## Live demos
+
+- **[Lit Primitives](https://tatimblin.github.io/eevee-threejs/examples/primitives/)** — sphere + torus-knot, live view-transform switch
+- **[Painterly Cloud](https://tatimblin.github.io/eevee-threejs/examples/cloud/)** — billboard cloud with a procedurally-generated brush atlas
+- **[Landing page](https://tatimblin.github.io/eevee-threejs/)**
+
+Drag to orbit in either demo.
 
 ## Why this exists
 
@@ -84,10 +89,13 @@ Methods: `sync()` (push fields → uniforms), `sunDirection()`, `backgroundColor
 
 ## Examples
 
+Run live (above) or locally. ES modules + import maps need an HTTP server — opening the
+HTML over `file://` will not work:
+
 ```
 python3 -m http.server      # from the repo root, then open:
-#  examples/primitives/     — lit sphere + torus-knot, live view-transform switch
-#  examples/cloud/          — painterly billboard cloud (procedural brush atlas)
+#  http://localhost:8000/examples/primitives/   — lit sphere + torus-knot, view-transform switch
+#  http://localhost:8000/examples/cloud/        — painterly billboard cloud (procedural brush atlas)
 ```
 
 Both examples pull Three.js from a CDN via an import map — no install needed.
