@@ -78,8 +78,8 @@ function fbm(x,y,z){let f=0,a=0.5,sc=1;for(let i=0;i<3;i++){f+=a*vnoise(x*sc,y*s
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.NoToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace; // eeveeView() encodes to this
+renderer.toneMapping = THREE.NoToneMapping;        // eeveeView() does exposure + view transform in-shader
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -88,17 +88,20 @@ camera.position.set(6, 2.2, 9);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.target.set(0, 0.2, 0);
 
+// Tuned against the encoded output of eeveeView(): sunlit crowns land near white
+// (~0.9) with Filmic's shoulder instead of clipping, and the lower ambient/sky
+// fill keeps the sky-lit underside a clear, readable blue.
 const env = new EeveeEnv({
   sunColor: '#fff4de', sunStrength: 2.6,
   skyHorizon: '#a8cbf0', skyZenith: '#3f68c0',
-  skyStrength: 0.9, ambient: 0.6, exposure: 1.4, view: 'Filmic',
+  skyStrength: 0.8, ambient: 0.35, exposure: 2.0, view: 'Filmic',
   azimuth: 65, elevation: 55,
 });
 renderer.setClearColor(env.backgroundColor('#3b3b3b'), 1);
 
 const params = {
   seed: 1, density: 900, cardScale: 1.5, scaleRandom: 0.5, rotateRandom: 0.35,
-  contrast: 0.18, shadowTint: '#8fb4dd', transition: 0.6, rim: 0.4, gradientZ: 0.5,
+  contrast: 0.3, shadowTint: '#8fb4dd', transition: 0.6, rim: 0.4, gradientZ: 0.5,
 };
 
 let atlas = makeBrushAtlas(1024, params.seed);
@@ -170,20 +173,20 @@ const material = new THREE.ShaderMaterial({
       float mid = band*(1.0-band)*4.0;
       vec3 hsv = rgb2hsv(col);
       hsv.x = fract(hsv.x + var*0.03*uTransition*mid);
-      hsv.z = clamp(hsv.z + var*0.10*uTransition*mid, 0.0, 1.0);
+      hsv.z = max(hsv.z + var*0.10*uTransition*mid, 0.0);   // no upper clamp: let the view transform roll off sunlit HDR
       col = hsv2rgb(hsv);
 
       // rim light toward the sun
       vec3 V = normalize(uCamPos - vWorld);
       float fres = pow(1.0 - clamp(dot(V,N),0.0,1.0), 3.0);
       float rim = fres * max(dot(N,uEeveeSunDir),0.0) * uRim;
-      col = 1.0 - (1.0-col)*(1.0-rim*uEeveeSunColor);
+      col += rim * uEeveeSunColor;                 // additive: a screen blend would dim HDR (>1) values
 
       // gradient Z
       float zt = clamp((vWorld.y-uCloudMinY)/max(uCloudSizeY,1e-3), 0.0, 1.0);
       col *= mix(1.0-0.2*uGradientZ, 1.0, zt);
 
-      gl_FragColor = vec4(eeveeView(col), alpha);   // view transform via module
+      gl_FragColor = vec4(eeveeView(col), alpha);   // exposure + view transform + encode via module
     }
   `,
 });

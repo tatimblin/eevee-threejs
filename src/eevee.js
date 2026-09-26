@@ -8,7 +8,8 @@
 //   2. A GRADIENT-SKY WORLD, sampled as diffuse hemisphere irradiance — the thing
 //      that gives sky-lit undersides their color instead of going black.
 //   3. A "Shader to RGB" style diffuse response + a view transform
-//      (Standard / Filmic / AgX) + sRGB encode, matching Blender's color mgmt.
+//      (Standard / Filmic / AgX) + the display (sRGB) encode, matching Blender's
+//      color management: eeveeView() returns final display color.
 //
 // It is deliberately NOT a full PBR engine — it ports the specific, common Eevee
 // setup of "one sun + a colored/gradient world + Filmic". Compose the chunks into
@@ -19,13 +20,29 @@
 import * as THREE from 'three';
 
 // ---------------------------------------------------------------------------
-// GLSL: paste EEVEE_GLSL near the top of your fragment shader (after precision).
-// It defines:
+// GLSL: paste EEVEE_GLSL near the top of a THREE.ShaderMaterial FRAGMENT shader
+// (after precision). It defines:
 //   vec3  eeveeSky(vec3 dir)                     -- world/env radiance in a direction
 //   vec3  eeveeSkyIrradiance(vec3 N)             -- diffuse hemisphere irradiance for normal N
 //   vec3  eeveeSunDiffuse(vec3 N)                -- sun Lambert term (color*strength*max(N·L,0))
 //   vec3  eeveeShadeDiffuse(vec3 N, vec3 albedo) -- full "Shader to RGB" diffuse (sun + sky + ambient)
-//   vec3  eeveeView(vec3 linearColor)            -- exposure + view transform, returns LINEAR (renderer encodes sRGB)
+//   vec3  eeveeTonemap(vec3 linearColor)         -- exposure + view transform; display-LINEAR [0,1], not encoded
+//   vec3  eeveeView(vec3 linearColor)            -- eeveeTonemap + output encode: final color for gl_FragColor
+//
+// Color management. three.js never encodes a ShaderMaterial's output by itself:
+// gl_FragColor reaches the canvas as-is unless the shader calls three's
+// linearToOutputTexel (all that #include <colorspace_fragment> does). eeveeView()
+// makes that call, so it runs Blender's whole chain: exposure -> view transform ->
+// display encode. The encode follows renderer.outputColorSpace, so it is sRGB on a
+// normal canvas. Inside a render target three swaps in a linear "encode", so
+// post-processing still gets linear values and the final pass (e.g. OutputPass)
+// encodes once.
+//
+// Opt-out: #define EEVEE_LINEAR_OUTPUT (above EEVEE_GLSL, or via material.defines)
+// and eeveeView() returns eeveeTonemap()'s display-linear color unencoded. Use it
+// when your shader does #include <colorspace_fragment> itself, and in
+// RawShaderMaterial or vertex shaders: three defines linearToOutputTexel only in
+// ShaderMaterial fragment shaders, so there you must do the encode yourself.
 // ---------------------------------------------------------------------------
 export const EEVEE_GLSL = /* glsl */`
   // ---- world / sun uniforms (see EeveeEnv.uniforms) ----
@@ -71,6 +88,7 @@ export const EEVEE_GLSL = /* glsl */`
   }
 
   // ---- view transforms (operate on LINEAR scene-referred color) ----
+  // Each returns display-LINEAR color; eeveeView() applies the display encode once.
   vec3 eeveeFilmic(vec3 x){
     // Uncharted-2 filmic curve, a close stand-in for Blender's Filmic look.
     const float A=0.15,B=0.50,C=0.10,D=0.20,E=0.02,F=0.30;
@@ -78,20 +96,40 @@ export const EEVEE_GLSL = /* glsl */`
     vec3 w = ((vec3(11.2)*(A*vec3(11.2)+C*B)+D*E)/(vec3(11.2)*(A*vec3(11.2)+B)+D*F))-E/F;
     return c / w;
   }
+  // sRGB decode (display code value -> display-linear); inverse of three's sRGBTransferOETF.
+  vec3 eeveeSRGBToLinear(vec3 c){
+    return mix(pow((c + 0.055) / 1.055, vec3(2.4)), c / 12.92, vec3(lessThanEqual(c, vec3(0.04045))));
+  }
   // Minimal AgX approximation (Blender 4.x default). Punchy contrast + gentle
   // highlight desaturation. Not the full OCIO transform, but visually close.
+  // Like real AgX's sigmoid, this curve is shaped in display-encoded space, so
+  // its result is decoded to display-linear here; the encode in eeveeView()
+  // restores it exactly.
   vec3 eeveeAgx(vec3 x){
     x = max(x, 0.0);
     vec3 v = pow(x / (x + 0.155), vec3(1.0)); // reinhard-ish shoulder
     v = pow(v, vec3(1.0/1.3));                 // contrast
-    return clamp(v, 0.0, 1.0);
+    return eeveeSRGBToLinear(clamp(v, 0.0, 1.0));
   }
-  // Returns LINEAR color; let the renderer (outputColorSpace = sRGB) encode.
-  vec3 eeveeView(vec3 col){
+
+  // Exposure + view transform only: display-LINEAR color in [0,1], NOT encoded.
+  // Use it to keep working on the color after the view transform (grading, fog,
+  // compositing), then encode once at the end with linearToOutputTexel.
+  vec3 eeveeTonemap(vec3 col){
     col *= uEeveeExposure;
-    if (uEeveeView == 1) return eeveeFilmic(col);
-    if (uEeveeView == 2) return eeveeAgx(col);
-    return clamp(col, 0.0, 1.0);               // Standard (clamp)
+    if (uEeveeView == 1) col = eeveeFilmic(col);
+    else if (uEeveeView == 2) col = eeveeAgx(col);
+    return clamp(col, 0.0, 1.0);               // Standard is just the clamp
+  }
+
+  // Final display color: exposure -> view transform -> output encode (see the
+  // color-management note at the top of eevee.js). Output it as-is.
+  vec3 eeveeView(vec3 col){
+    col = eeveeTonemap(col);
+  #ifndef EEVEE_LINEAR_OUTPUT
+    col = linearToOutputTexel(vec4(col, 1.0)).rgb;
+  #endif
+    return col;
   }
 `;
 

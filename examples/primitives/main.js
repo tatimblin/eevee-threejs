@@ -12,8 +12,8 @@ THREE.ColorManagement.enabled = true;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.NoToneMapping; // we tonemap in-shader (eeveeView)
+renderer.outputColorSpace = THREE.SRGBColorSpace; // eeveeView() encodes to this
+renderer.toneMapping = THREE.NoToneMapping; // eeveeView() does exposure + view transform in-shader
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -50,7 +50,7 @@ function eeveeDiffuseMaterial(albedoHex) {
       varying vec3 vN;
       void main(){
         vec3 lit = eeveeShadeDiffuse(normalize(vN), uAlbedo);
-        gl_FragColor = vec4(eeveeView(lit), 1.0);
+        gl_FragColor = vec4(eeveeView(lit), 1.0);   // final, display-encoded color
       }
     `,
   });
